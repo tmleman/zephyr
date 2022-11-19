@@ -16,32 +16,33 @@
 
 /* Power Control register - controls the power domain operations. */
 struct ace_pwrctl {
-	uint16_t wpdsphpxpg : 3;
+	uint16_t wpdsphpxpg : 3;/*Wake / Prevent DSP-HPx Power Gating*/
 	uint16_t rsvd3      : 1;
-	uint16_t wphstpg    : 1;
+	uint16_t wphstpg    : 1;/*Wake / Prevent HST Power Gating*/
 	uint16_t rsvd5      : 1;
-	uint16_t wphubhppg  : 1;
+	uint16_t wphubhppg  : 1;/*Wake / Prevent HUB-HP Power Gating*/
 	uint16_t wpdspulppg : 1;
-	uint16_t wpioxpg    : 2;
+	uint16_t wpioxpg    : 2;/*Wake / Prevent IOx Power Gating*/
 	uint16_t rsvd11     : 2;
-	uint16_t wpmlpg     : 1;
+	uint16_t wpmlpg     : 1;/*Wake / Prevent ML Power Gating*/
 	uint16_t rsvd14     : 2;
-	uint16_t phubulppg  : 1;
+	/*Note: This domain is the last to power gate, hence wake is always from external once power gated.*/
+	uint16_t phubulppg  : 1;/*Prevent HUB-ULP Power Gating*/
 };
 
 #define ACE_PWRCTL ((volatile struct ace_pwrctl *) &ACE_DfPMCCU.dfpwrctl)
 
 /* Power Status register - reports the power domain status. */
 struct ace_pwrsts {
-	uint16_t dsphpxpgs : 4;
-	uint16_t hstpgs    : 1;
+	uint16_t dsphpxpgs : 4;/*DSP Core Power Gating Status*/
+	uint16_t hstpgs    : 1;/*HST Power Gating Status*/
 	uint16_t rsvd5     : 1;
-	uint16_t hubhppgs  : 1;
+	uint16_t hubhppgs  : 1;/*HUB-HP Power Gating Status*/
 	uint16_t dspulppgs : 1;
-	uint16_t ioxpgs    : 4;
-	uint16_t mlpgs     : 2;
+	uint16_t ioxpgs    : 4;/*LPIO Power Gating Status*/
+	uint16_t mlpgs     : 2;/*ML Power Gating Status*/
 	uint16_t rsvd14    : 1;
-	uint16_t hubulppgs : 1;
+	uint16_t hubulppgs : 1;/*HUB-ULP Power Gating Status*/
 };
 
 #define ACE_PWRSTS ((volatile struct ace_pwrsts *) &ACE_DfPMCCU.dfpwrsts)
