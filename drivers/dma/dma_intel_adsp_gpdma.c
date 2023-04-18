@@ -440,7 +440,7 @@ int intel_adsp_gpdma_init(const struct device *dev)
 		pm_device_init_suspended(dev);
 	}
 
-	return 0;
+	return pm_device_runtime_enable(dev);
 #else
 	return intel_adsp_gpdma_power_on(dev);
 #endif
