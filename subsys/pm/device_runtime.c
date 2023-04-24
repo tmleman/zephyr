@@ -66,7 +66,7 @@ static int runtime_suspend(const struct device *dev, bool async,
 	}
 
 	if (pm->usage == 0U) {
-		LOG_WRN("Unbalanced suspend");
+		LOG_WRN("Unbalanced suspend of %s", dev->name);
 		ret = -EALREADY;
 		goto unlock;
 	}
@@ -88,6 +88,7 @@ static int runtime_suspend(const struct device *dev, bool async,
 			goto unlock;
 		}
 
+		LOG_INF("%s is suspend", dev->name);
 		pm->state = PM_DEVICE_STATE_SUSPENDED;
 	}
 
@@ -214,6 +215,7 @@ int pm_device_runtime_get(const struct device *dev)
 		goto unlock;
 	}
 
+	LOG_INF("%s is active", dev->name);
 	pm->state = PM_DEVICE_STATE_ACTIVE;
 
 unlock:
