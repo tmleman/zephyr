@@ -24,20 +24,11 @@ static void select_cpu_clock_hw(uint32_t freq_idx)
 	uint32_t enc = adsp_clock_freq_enc[freq_idx];
 	uint32_t status_mask = adsp_clock_freq_mask[freq_idx];
 
-	/* Request clock */
-	ADSP_CLKCTL |= enc;
+	uint32_t clk_ctl = ADSP_CLKCTL;
+	clk_ctl &= ~ADSP_CLKCTL_OSC_SOURCE_MASK;
+	clk_ctl |= (enc & ADSP_CLKCTL_OSC_SOURCE_MASK);
 
-	/* Wait for requested clock to be on */
-	while ((ADSP_CLKCTL & status_mask) != status_mask) {
-		k_busy_wait(10);
-	}
-
-	/* Switch to requested clock */
-	ADSP_CLKCTL = (ADSP_CLKCTL & ~ADSP_CLKCTL_OSC_SOURCE_MASK) |
-			    enc;
-
-	/* Release other clocks */
-	ADSP_CLKCTL &= ~ADSP_CLKCTL_OSC_REQUEST_MASK | enc;
+	ADSP_CLKCTL = clk_ctl;
 }
 
 int adsp_clock_set_cpu_freq(uint32_t freq_idx)
