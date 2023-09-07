@@ -78,6 +78,7 @@ void adsp_clock_init(void)
 #ifdef CONFIG_SOC_SERIES_INTEL_ACE
 	ACE_DfPMCCU.dfclkctl |= ACE_CLKCTL_WOVCRO;
 	if (ACE_DfPMCCU.dfclkctl & ACE_CLKCTL_WOVCRO) {
+		select_cpu_clock_hw(ADSP_CPU_CLOCK_FREQ_WOVCRO);
 		ACE_DfPMCCU.dfclkctl = ACE_DfPMCCU.dfclkctl & ~ACE_CLKCTL_WOVCRO;
 	} else {
 		platform_lowest_freq_idx = ADSP_CPU_CLOCK_FREQ_IPLL;
