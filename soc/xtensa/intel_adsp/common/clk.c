@@ -150,3 +150,17 @@ uint32_t adsp_clock_source_frequency(int source)
 
 	return adsp_clk_src_info[source].frequency;
 }
+
+void adsp_clock_idle_slow_down(void)
+{
+	if (platform_cpu_clocks[0].current_freq != platform_cpu_clocks[0].lowest_freq) {
+		select_cpu_clock_hw(platform_cpu_clocks[0].lowest_freq);
+	}
+}
+
+void adsp_clock_idle_restore(void)
+{
+	if (platform_cpu_clocks[0].current_freq != platform_cpu_clocks[0].lowest_freq) {
+		select_cpu_clock_hw(platform_cpu_clocks[0].current_freq);
+	}
+}
