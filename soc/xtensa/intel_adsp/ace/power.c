@@ -231,6 +231,7 @@ void pm_state_set(enum pm_state state, uint8_t substate_id)
 	/* save interrupt state and turn off all interrupts */
 	core_desc[cpu].intenable = XTENSA_RSR("INTENABLE");
 	z_xt_ints_off(0xffffffff);
+	(void)atomic_dec(&_cpus_idleing);
 
 	if (state == PM_STATE_SOFT_OFF) {
 		core_desc[cpu].bctl = DSPCS.bootctl[cpu].bctl;
@@ -304,6 +305,7 @@ void pm_state_set(enum pm_state state, uint8_t substate_id)
 			battr |= (DSPBR_BATTR_LPSCTL_RESTORE_BOOT & LPSCTL_BATTR_MASK);
 			DSPCS.bootctl[cpu].battr = battr;
 		}
+
 		power_gate_entry(cpu);
 	} else {
 		__ASSERT(false, "invalid argument - unsupported power state");
@@ -367,6 +369,7 @@ void pm_state_exit_post_ops(enum pm_state state, uint8_t substate_id)
 		__ASSERT(false, "invalid argument - unsupported power state");
 	}
 
+	(void)atomic_inc(&_cpus_idleing);
 	z_xt_ints_on(core_desc[cpu].intenable);
 }
 

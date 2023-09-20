@@ -195,6 +195,8 @@ extern struct z_kernel _kernel;
 
 extern atomic_t _cpus_active;
 
+extern atomic_t _cpus_idleing;
+
 #ifdef CONFIG_SMP
 
 /* True if the current context can be preempted and migrated to

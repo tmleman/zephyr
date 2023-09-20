@@ -65,6 +65,9 @@ void idle(void *unused1, void *unused2, void *unused3)
 
 #ifdef CONFIG_PM
 		_kernel.idle = z_get_next_timeout_expiry();
+		(void)atomic_inc(&_cpus_idleing);
+		if (_cpus_idleing == _cpus_active)
+			adsp_clock_idle_entry();
 
 		/*
 		 * Call the suspend hook function of the soc interface
@@ -84,6 +87,11 @@ void idle(void *unused1, void *unused2, void *unused3)
 		if (k_is_pre_kernel() || !pm_system_suspend(_kernel.idle)) {
 			k_cpu_idle();
 		}
+
+		if (_cpus_idleing == _cpus_active)
+			adsp_clock_idle_exit();
+
+		(void)atomic_dec(&_cpus_idleing);
 #else
 		k_cpu_idle();
 #endif
