@@ -12,9 +12,11 @@
 
 #include <adsp_clk.h>
 #include <adsp_shim.h>
+#include <zephyr/pm/policy.h>
 
 static struct adsp_cpu_clock_info platform_cpu_clocks[CONFIG_MP_MAX_NUM_CPUS];
 static struct k_spinlock lock;
+atomic_t clock_sd_count;
 
 int adsp_clock_freq_enc[] = ADSP_CPU_CLOCK_FREQ_ENC;
 int adsp_clock_freq_mask[] = ADSP_CPU_CLOCK_FREQ_MASK;
@@ -153,14 +155,19 @@ uint32_t adsp_clock_source_frequency(int source)
 
 void adsp_clock_idle_slow_down(void)
 {
+	if (pm_policy_state_lock_is_active(PM_STATE_ACTIVE, 2))
+		return;
+
 	if (platform_cpu_clocks[0].current_freq != platform_cpu_clocks[0].lowest_freq) {
+		(void)atomic_inc(&clock_sd_count);
 		select_cpu_clock_hw(platform_cpu_clocks[0].lowest_freq);
 	}
 }
 
 void adsp_clock_idle_restore(void)
 {
-	if (platform_cpu_clocks[0].current_freq != platform_cpu_clocks[0].lowest_freq) {
+	if (platform_cpu_clocks[0].current_freq != platform_cpu_clocks[0].lowest_freq && atomic_get(&clock_sd_count)) {
 		select_cpu_clock_hw(platform_cpu_clocks[0].current_freq);
+		(void)atomic_clear(&clock_sd_count);
 	}
 }
