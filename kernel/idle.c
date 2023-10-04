@@ -66,7 +66,7 @@ void idle(void *unused1, void *unused2, void *unused3)
 #ifdef CONFIG_PM
 		_kernel.idle = z_get_next_timeout_expiry();
 		(void)atomic_inc(&_cpus_idleing);
-		if (_cpus_idleing == _cpus_active && _kernel.idle > 11)
+		if (_cpus_idleing == _cpus_active)
 			adsp_clock_idle_slow_down();
 
 		/*
