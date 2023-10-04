@@ -50,7 +50,14 @@
 		};
 
 		power-states {
-			d0i3: idle {
+			idle1: idle1 {
+				compatible = "zephyr,power-state";
+				power-state-name = "active";
+				substate-id = <1>;
+				min-residency-us = <0>;
+				exit-latency-us = <0>;
+			};
+			d0i3: rt_idle {
 				compatible = "zephyr,power-state";
 				power-state-name = "runtime-idle";
 				min-residency-us = <200>;
