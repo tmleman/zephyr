@@ -43,6 +43,8 @@ void z_intel_adsp_ipc_isr(const void *devarg)
 	volatile struct intel_adsp_ipc *regs = config->regs;
 	k_spinlock_key_t key = k_spin_lock(&devdata->lock);
 
+	adsp_clock_idle_exit();
+
 	if (regs->tdr & INTEL_ADSP_IPC_BUSY) {
 		bool done = true;
 
