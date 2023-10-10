@@ -157,6 +157,7 @@ uint32_t adsp_clock_source_frequency(int source)
 
 void adsp_clock_idle_entry(void)
 {
+#if CONFIG_SOC_SERIES_INTEL_ACE
 	if (pm_policy_state_lock_is_active(PM_STATE_ACTIVE, 1))
 		return;
 
@@ -164,10 +165,12 @@ void adsp_clock_idle_entry(void)
 		(void)atomic_inc(&clock_sd_count);
 		select_cpu_clock_hw(platform_cpu_clocks[0].lowest_freq);
 	}
+#endif
 }
 
 void adsp_clock_idle_exit(void)
 {
+#if CONFIG_SOC_SERIES_INTEL_ACE
 	if (!atomic_get(&clock_sd_count))
 		return;
 
@@ -175,4 +178,5 @@ void adsp_clock_idle_exit(void)
 		select_cpu_clock_hw(platform_cpu_clocks[0].current_freq);
 		(void)atomic_clear(&clock_sd_count);
 	}
+#endif
 }
