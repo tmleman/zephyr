@@ -53,10 +53,15 @@ int intel_adsp_hda_dma_host_in_config(const struct device *dev,
 		*DGMBS(cfg->base, cfg->regblock_size, channel) =
 			blk_cfg->block_size & HDA_ALIGN_MASK;
 
-		if (dma_cfg->source_data_size <= 3) {
-			/* set the sample container set bit to 16bits */
+		/*
+		 * The Sample Container Size (SCS) bit
+		 * must be set to 0 for 32bit sample size (HD Audio container size)
+		 * otherwise it must be set to 1 for sample size container
+		 */
+		if (dma_cfg->source_data_size <= 3)
 			*DGCS(cfg->base, cfg->regblock_size, channel) |= DGCS_SCS;
-		}
+		else
+			*DGCS(cfg->base, cfg->regblock_size, channel) &= ~DGCS_SCS;
 	}
 
 	return res;
@@ -90,10 +95,15 @@ int intel_adsp_hda_dma_host_out_config(const struct device *dev,
 		*DGMBS(cfg->base, cfg->regblock_size, channel) =
 			blk_cfg->block_size & HDA_ALIGN_MASK;
 
-		if (dma_cfg->dest_data_size <= 3) {
-			/* set the sample container set bit to 16bits */
+		/*
+		 * The Sample Container Size (SCS) bit
+		 * must be set to 0 for 32bit sample size (HD Audio container size)
+		 * otherwise it must be set to 1 for sample size container
+		 */
+		if (dma_cfg->source_data_size <= 3)
 			*DGCS(cfg->base, cfg->regblock_size, channel) |= DGCS_SCS;
-		}
+		else
+			*DGCS(cfg->base, cfg->regblock_size, channel) &= ~DGCS_SCS;
 	}
 
 	return res;
@@ -121,10 +131,15 @@ int intel_adsp_hda_dma_link_in_config(const struct device *dev,
 	res = intel_adsp_hda_set_buffer(cfg->base, cfg->regblock_size, channel, buf,
 				  blk_cfg->block_size);
 
-	if (res == 0 && dma_cfg->dest_data_size <= 3) {
-		/* set the sample container set bit to 16bits */
+	/*
+	 * The Sample Container Size (SCS) bit
+	 * must be set to 0 for 32bit sample size (HD Audio container size)
+	 * otherwise it must be set to 1 for sample size container
+	 */
+	if (dma_cfg->source_data_size <= 3)
 		*DGCS(cfg->base, cfg->regblock_size, channel) |= DGCS_SCS;
-	}
+	else
+		*DGCS(cfg->base, cfg->regblock_size, channel) &= ~DGCS_SCS;
 
 	return res;
 }
@@ -153,10 +168,15 @@ int intel_adsp_hda_dma_link_out_config(const struct device *dev,
 	res = intel_adsp_hda_set_buffer(cfg->base, cfg->regblock_size, channel, buf,
 				  blk_cfg->block_size);
 
-	if (res == 0 && dma_cfg->source_data_size <= 3) {
-		/* set the sample container set bit to 16bits */
+	/*
+	 * The Sample Container Size (SCS) bit
+	 * must be set to 0 for 32bit sample size (HD Audio container size)
+	 * otherwise it must be set to 1 for sample size container
+	 */
+	if (dma_cfg->source_data_size <= 3)
 		*DGCS(cfg->base, cfg->regblock_size, channel) |= DGCS_SCS;
-	}
+	else
+		*DGCS(cfg->base, cfg->regblock_size, channel) &= ~DGCS_SCS;
 
 	return res;
 }
