@@ -10,6 +10,7 @@
 #include <zephyr/drivers/timer/system_timer.h>
 #include <zephyr/wait_q.h>
 #include <zephyr/pm/pm.h>
+#include <zephyr/pm/policy.h>
 #include <stdbool.h>
 #include <zephyr/logging/log.h>
 #include <ksched.h>
@@ -65,12 +66,6 @@ void idle(void *unused1, void *unused2, void *unused3)
 
 #ifdef CONFIG_PM
 		_kernel.idle = z_get_next_timeout_expiry();
-#if CONFIG_SOC_SERIES_INTEL_ACE
-		(void)atomic_inc(&_cpus_idleing);
-		if (_cpus_idleing == _cpus_active)
-			adsp_clock_idle_entry();
-#endif
-
 		/*
 		 * Call the suspend hook function of the soc interface
 		 * to allow entry into a low power state. The function
@@ -87,14 +82,16 @@ void idle(void *unused1, void *unused2, void *unused3)
 		 * logic.
 		 */
 		if (k_is_pre_kernel() || !pm_system_suspend(_kernel.idle)) {
-			k_cpu_idle();
-		}
 #if CONFIG_SOC_SERIES_INTEL_ACE
-		if (_cpus_idleing == _cpus_active)
-			adsp_clock_idle_exit();
-
-		(void)atomic_dec(&_cpus_idleing);
+			pm_policy_state_lock_put(PM_STATE_ACTIVE, 1);
+			adsp_clock_idle_entry();
 #endif
+			k_cpu_idle();
+#if CONFIG_SOC_SERIES_INTEL_ACE
+			pm_policy_state_lock_get(PM_STATE_ACTIVE, 1);
+			adsp_clock_idle_exit();
+#endif
+		}
 #else
 		k_cpu_idle();
 #endif
