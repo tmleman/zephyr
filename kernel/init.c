@@ -48,9 +48,6 @@ struct z_kernel _kernel;
 __pinned_bss
 atomic_t _cpus_active;
 
-__pinned_bss
-atomic_t _cpus_idleing;
-
 /* init/main and idle threads */
 K_THREAD_PINNED_STACK_DEFINE(z_main_stack, CONFIG_MAIN_STACK_SIZE);
 struct k_thread z_main_thread;
