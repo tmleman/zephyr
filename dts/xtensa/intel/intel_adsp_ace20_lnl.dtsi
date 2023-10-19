@@ -50,6 +50,20 @@
 		};
 
 		power-states {
+			clock_gating: idle1 {
+				compatible = "zephyr,power-state";
+				power-state-name = "active";
+				substate-id = <1>;
+				min-residency-us = <0>;
+				exit-latency-us = <0>;
+			};
+			clock_switching: idle2 {
+				compatible = "zephyr,power-state";
+				power-state-name = "active";
+				substate-id = <2>;
+				min-residency-us = <0>;
+				exit-latency-us = <0>;
+			};
 			d0i3: rt_idle {
 				compatible = "zephyr,power-state";
 				power-state-name = "runtime-idle";
