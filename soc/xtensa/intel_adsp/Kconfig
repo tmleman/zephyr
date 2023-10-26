@@ -132,4 +132,11 @@ config ADSP_CPU_DYNAMIC_CLOCK_GATING
 	  (wait for interrupt) during idle. Clock gating will be disabled in which
 	  there is dependence on dependency to CCOUNT value or DSP clock interrupt.
 
+config ADSP_CPU_DYNAMIC_CLOCK_SWITCHING
+	bool "DSP clock switching in Idle"
+	help
+	  When true, FW will switch clock if all cores are in idle state. The dynamic
+	  clock change is intended to reduce energy consumption when the DSP is waiting
+	  for interrupt.
+
 endif # SOC_FAMILY_INTEL_ADSP

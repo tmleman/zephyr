@@ -153,3 +153,52 @@ uint32_t adsp_clock_source_frequency(int source)
 
 	return adsp_clk_src_info[source].frequency;
 }
+
+#ifdef CONFIG_ADSP_CPU_DYNAMIC_CLOCK_SWITCHING
+/**
+ * @brief Clock change counter.
+ *
+ * A atomic variable that counts how many times the clock has been tried to be lowered.
+ */
+atomic_t clock_change_count;
+
+/**
+ * @brief Clock switch on idle entry.
+ *
+ * This function should be called in Idle thread. Intel ADSP can change clock according to
+ * its needs. But in idle, when core is waiting for interrupt, clock can be change to
+ * lower frequanze.
+ *
+ * @see adsp_clock_idle_exit()
+ */
+void adsp_clock_idle_entry(void)
+{
+	/* we are already at the lowest clock, there is no need to do anything */
+	if (platform_cpu_clocks[0].current_freq != platform_cpu_clocks[0].lowest_freq) {
+		select_cpu_clock_hw(platform_cpu_clocks[0].lowest_freq);
+		(void)atomic_inc(&clock_change_count);
+	}
+}
+
+/**
+ * @brief Clock restore on idle exit.
+ *
+ * This function must be called when exiting the idle state. During idle entry core could switch
+ * clock to the lowest frequency and we need to restore previous settings.
+ *
+ * @see adsp_clock_idle_entry()
+ */
+void adsp_clock_idle_exit(void)
+{
+	/* clock has not been changed */
+	if (!atomic_get(&clock_change_count))
+		return;
+
+	/* If the DSP should run at a higher clock than the lowest, restore this setting */
+	if (platform_cpu_clocks[0].current_freq != platform_cpu_clocks[0].lowest_freq) {
+		select_cpu_clock_hw(platform_cpu_clocks[0].current_freq);
+		(void)atomic_clear(&clock_change_count);
+	}
+}
+
+#endif /* CONFIG_ADSP_CPU_DYNAMIC_CLOCK_SWITCHING */
