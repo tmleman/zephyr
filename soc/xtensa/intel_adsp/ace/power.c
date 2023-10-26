@@ -381,9 +381,23 @@ void pm_state_exit_post_ops(enum pm_state state, uint8_t substate_id)
 
 #ifdef CONFIG_ARCH_CPU_IDLE_CUSTOM
 
+extern void adsp_clock_idle_entry(void);
+extern void adsp_clock_idle_exit(void);
+
 void arch_cpu_idle(void)
 {
 	sys_trace_idle();
+#if CONFIG_ADSP_CPU_DYNAMIC_CLOCK_SWITCHING
+	/* NOTE: Decreasing a power state lock counter before entering idle. Primary core is
+	 * increasing/decreasing lock counter each time secondary core is powerup/shutdown.
+	 * This way state lock is active for non-idle cores.
+	 */
+	pm_policy_state_lock_put(PM_STATE_ACTIVE, 2);
+
+	if (pm_policy_state_lock_is_active(PM_STATE_ACTIVE, 2)) {
+		adsp_clock_idle_entry();
+	}
+#endif /* CONFIG_ADSP_CPU_DYNAMIC_CLOCK_SWITCHING */
 
 #if CONFIG_ADSP_CPU_DYNAMIC_CLOCK_GATING
 	/* TODO: Add enum for substates (1 -> clock gating) */
@@ -392,9 +406,14 @@ void arch_cpu_idle(void)
 	} else {
 		DSPCS.bootctl[arch_proc_id()].bctl &= ~DSPBR_BCTL_WAITIPCG;
 	}
-#endif
+#endif /* CONFIG_ADSP_CPU_DYNAMIC_CLOCK_GATING */
+
 	wait_for_interrupt(0);
+#if CONFIG_ADSP_CPU_DYNAMIC_CLOCK_SWITCHING
+	pm_policy_state_lock_get(PM_STATE_ACTIVE, 2);
+	adsp_clock_idle_exit();
+#endif /* CONFIG_ADSP_CPU_DYNAMIC_CLOCK_SWITCHING */
 }
-#endif
+#endif /* CONFIG_ARCH_CPU_IDLE_CUSTOM */
 
 #endif
