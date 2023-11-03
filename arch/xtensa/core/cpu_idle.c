@@ -7,7 +7,6 @@
 #include <zephyr/tracing/tracing.h>
 
 #ifndef CONFIG_ARCH_CPU_IDLE_CUSTOM
-__no_optimization
 void arch_cpu_idle(void)
 {
 	sys_trace_idle();
