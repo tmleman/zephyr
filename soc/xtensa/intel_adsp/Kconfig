@@ -125,4 +125,11 @@ config XTENSA_WAITI_BUG
 	  platforms which prefixes a WAITI entry with 128 NOP
 	  instructions followed by an ISYNC and EXTW.
 
+config ADSP_CPU_DYNAMIC_CLOCK_GATING
+	bool "DSP clock gating in Idle"
+	help
+	  When true, FW will enable clock gating before core enter WAITI state
+	  (wait for interrupt) during idle. Clock gating will be disabled in which
+	  there is dependence on dependency to CCOUNT value or DSP clock interrupt.
+
 endif # SOC_FAMILY_INTEL_ADSP
