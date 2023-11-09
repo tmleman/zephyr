@@ -119,6 +119,11 @@ struct lpsram_header {
 	uint8_t rom_bypass_vectors_reserved[0xC00 - 0x14];
 };
 
+static ALWAYS_INLINE void wait_for_interrupt(const uint32_t immediate)
+{
+	__asm__ volatile ("waiti %0" :: "i" (immediate));
+}
+
 static ALWAYS_INLINE void _save_core_context(uint32_t core_id)
 {
 	core_desc[core_id].vecbase = XTENSA_RSR("VECBASE");
@@ -165,7 +170,7 @@ void power_gate_entry(uint32_t core_id)
 
 	soc_cpus_active[core_id] = false;
 	sys_cache_data_flush_range(soc_cpus_active, sizeof(soc_cpus_active));
-	k_cpu_idle();
+	wait_for_interrupt(0);
 	z_xt_ints_off(0xffffffff);
 }
 
@@ -372,5 +377,14 @@ void pm_state_exit_post_ops(enum pm_state state, uint8_t substate_id)
 
 	z_xt_ints_on(core_desc[cpu].intenable);
 }
+
+#ifdef CONFIG_ARCH_CPU_IDLE_CUSTOM
+
+void arch_cpu_idle(void)
+{
+	sys_trace_idle();
+	wait_for_interrupt(0);
+}
+#endif
 
 #endif
