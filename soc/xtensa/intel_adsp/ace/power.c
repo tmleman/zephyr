@@ -17,6 +17,7 @@
 #include <adsp_imr_layout.h>
 #include <zephyr/drivers/mm/mm_drv_intel_adsp_mtl_tlb.h>
 #include <zephyr/drivers/timer/system_timer.h>
+#include <zephyr/pm/policy.h>
 #include <mem_window.h>
 
 #define LPSRAM_MAGIC_VALUE      0x13579BDF
@@ -383,6 +384,15 @@ void pm_state_exit_post_ops(enum pm_state state, uint8_t substate_id)
 void arch_cpu_idle(void)
 {
 	sys_trace_idle();
+
+#if CONFIG_ADSP_CPU_DYNAMIC_CLOCK_GATING
+	/* TODO: Add enum for substates (1 -> clock gating) */
+	if (pm_policy_state_lock_is_active(PM_STATE_ACTIVE, 1)) {
+		DSPCS.bootctl[arch_proc_id()].bctl |= DSPBR_BCTL_WAITIPCG;
+	} else {
+		DSPCS.bootctl[arch_proc_id()].bctl &= ~DSPBR_BCTL_WAITIPCG;
+	}
+#endif
 	wait_for_interrupt(0);
 }
 #endif
