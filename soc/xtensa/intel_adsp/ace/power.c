@@ -144,6 +144,7 @@ static ALWAYS_INLINE void _restore_core_context(void)
 }
 
 void dsp_restore_vector(void);
+void mp_resume_entry(void);
 
 void power_gate_entry(uint32_t core_id)
 {
@@ -174,6 +175,7 @@ void power_gate_exit(void)
 	cpu_early_init();
 	sys_cache_data_flush_and_invd_all();
 	_restore_core_context();
+	mp_resume_entry();
 }
 
 __asm__(".align 4\n\t"
