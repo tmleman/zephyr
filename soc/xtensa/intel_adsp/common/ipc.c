@@ -274,10 +274,6 @@ void intel_adsp_ipc_set_suspend_handler(const struct device *dev,
  */
 static int ipc_pm_action(const struct device *dev, enum pm_device_action action)
 {
-	if (pm_device_is_busy(INTEL_ADSP_IPC_HOST_DEV)) {
-		return -EBUSY;
-	}
-
 	const struct ipc_control_driver_api *api =
 		(const struct ipc_control_driver_api *)dev->api;
 
