@@ -27,8 +27,13 @@
 
 __imr void power_init(void)
 {
+#if CONFIG_ADSP_IDLE_CLOCK_GATING
 	/* Disable idle power gating */
+	DSPCS.bootctl[0].bctl |= DSPBR_BCTL_WAITIPPG;
+#else
+	/* Disable idle power and clock gating */
 	DSPCS.bootctl[0].bctl |= DSPBR_BCTL_WAITIPCG | DSPBR_BCTL_WAITIPPG;
+#endif /* CONFIG_ADSP_IDLE_CLOCK_GATING */
 }
 
 #ifdef CONFIG_PM
@@ -372,8 +377,11 @@ void pm_state_exit_post_ops(enum pm_state state, uint8_t substate_id)
 			k_panic();
 		}
 
-		DSPCS.bootctl[cpu].bctl |=
-			DSPBR_BCTL_WAITIPCG | DSPBR_BCTL_WAITIPPG;
+#if CONFIG_ADSP_IDLE_CLOCK_GATING
+		DSPCS.bootctl[cpu].bctl |= DSPBR_BCTL_WAITIPPG;
+#else
+		DSPCS.bootctl[cpu].bctl |= DSPBR_BCTL_WAITIPCG | DSPBR_BCTL_WAITIPPG;
+#endif /* CONFIG_ADSP_IDLE_CLOCK_GATING */
 		if (cpu == 0) {
 			DSPCS.bootctl[cpu].battr &= (~LPSCTL_BATTR_MASK);
 		}
@@ -387,4 +395,4 @@ void pm_state_exit_post_ops(enum pm_state state, uint8_t substate_id)
 	z_xt_ints_on(core_desc[cpu].intenable);
 }
 
-#endif
+#endif /* CONFIG_PM */
