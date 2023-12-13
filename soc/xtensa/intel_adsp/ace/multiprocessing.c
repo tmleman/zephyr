@@ -9,6 +9,7 @@
 #include <zephyr/sys/check.h>
 #include <zephyr/arch/cpu.h>
 #include <zephyr/pm/pm.h>
+#include <zephyr/pm/device_runtime.h>
 
 #include <soc.h>
 #include <adsp_boot.h>
@@ -82,6 +83,12 @@ void soc_mp_init(void)
 	/* Set the core 0 active */
 	soc_cpus_active[0] = true;
 }
+
+static int host_runtime_get(void)
+{
+	return pm_device_runtime_get(INTEL_ADSP_HST_DOMAIN_DEV);
+}
+SYS_INIT(host_runtime_get, POST_KERNEL, 99);
 
 #ifdef CONFIG_ADSP_IMR_CONTEXT_SAVE
 /*
