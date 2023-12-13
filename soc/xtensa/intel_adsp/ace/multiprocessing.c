@@ -9,6 +9,7 @@
 #include <zephyr/sys/check.h>
 #include <zephyr/arch/cpu.h>
 #include <zephyr/pm/pm.h>
+#include <zephyr/pm/device_runtime.h>
 
 #include <soc.h>
 #include <adsp_boot.h>
