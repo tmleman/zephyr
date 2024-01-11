@@ -139,6 +139,7 @@ int pm_device_runtime_get(const struct device *dev)
 	}
 
 	SYS_PORT_TRACING_FUNC_ENTER(pm, device_runtime_get, dev);
+	LOG_INF("%s", dev->name);
 
 	/*
 	 * Early return if device runtime is not enabled.
@@ -150,12 +151,14 @@ int pm_device_runtime_get(const struct device *dev)
 	if (!k_is_pre_kernel()) {
 		ret = k_sem_take(&pm->lock, k_is_in_isr() ? K_NO_WAIT : K_FOREVER);
 		if (ret < 0) {
+			LOG_ERR("%s ret -EWOULDBLOCK", dev->name);
 			return -EWOULDBLOCK;
 		}
 	}
 
 	if (k_is_in_isr() && (pm->state == PM_DEVICE_STATE_SUSPENDING)) {
 		ret = -EWOULDBLOCK;
+		LOG_ERR("%s ret -EWOULDBLOCK", dev->name);
 		goto unlock;
 	}
 
@@ -237,6 +240,7 @@ int pm_device_runtime_put(const struct device *dev)
 	}
 
 	SYS_PORT_TRACING_FUNC_ENTER(pm, device_runtime_put, dev);
+	LOG_INF("%s", dev->name);
 	ret = runtime_suspend(dev, false, K_NO_WAIT);
 
 	/*
