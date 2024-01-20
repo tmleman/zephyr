@@ -143,6 +143,7 @@ static ALWAYS_INLINE void _restore_core_context(void)
 	XTENSA_WSR("EXCSAVE2", core_desc[core_id].excsave2);
 	XTENSA_WSR("EXCSAVE3", core_desc[core_id].excsave3);
 	XTENSA_WUR("THREADPTR", core_desc[core_id].thread_ptr);
+	__asm__ volatile("wsr.intenable %0" : : "r"(0x00000000));
 	__asm__ volatile("mov a0, %0" :: "r"(core_desc[core_id].a0));
 	__asm__ volatile("mov a1, %0" :: "r"(core_desc[core_id].a1));
 	__asm__ volatile("rsync");
@@ -171,7 +172,6 @@ void power_gate_entry(uint32_t core_id)
 	soc_cpus_active[core_id] = false;
 	sys_cache_data_flush_range(soc_cpus_active, sizeof(soc_cpus_active));
 	k_cpu_idle();
-	z_xt_ints_off(0xffffffff);
 }
 
 void power_gate_exit(void)
