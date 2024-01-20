@@ -382,6 +382,11 @@ void pm_state_exit_post_ops(enum pm_state state, uint8_t substate_id)
 	}
 
 	z_xt_ints_on(core_desc[cpu].intenable);
+
+	/* We don't have the key used to lock interruptions here.
+	 * Just set PS.INTLEVEL to 0.
+	 */
+	__asm__ volatile ("rsil a2, 0");
 }
 
 #endif /* CONFIG_PM */
