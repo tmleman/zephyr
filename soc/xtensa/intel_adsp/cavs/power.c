@@ -157,7 +157,7 @@ void pm_state_set(enum pm_state state, uint8_t substate_id)
 			/* do power down - this function won't return */
 			power_down_cavs(true, uncache_to_cache(&hpsram_mask[0]));
 		} else {
-			k_cpu_idle();
+			k_cpu_atomic_idle(arch_irq_lock());
 		}
 	} else {
 		__ASSERT(false, "invalid argument - unsupported power state");
