@@ -98,10 +98,4 @@ static ALWAYS_INLINE bool soc_cpu_is_powered(int cpu_num)
  */
 #define INTEL_ADSP_HST_DOMAIN_DEV DEVICE_DT_GET(INTEL_ADSP_HST_DOMAIN_DTNODE)
 
-#define INTEL_ADSP_HST_DOMAIN_BIT DT_PROP(INTEL_ADSP_HST_DOMAIN_DTNODE, bit_position)
-
-#define INTEL_ADSP_ACE15_MAGIC_KEY 0xFFFACE15
-
-#define SRAM_TO_SRAM_ALIAS(address) ((__typeof__(address))((((uint32_t)(address)) & 0x1FFFFFFF) | 0x40000000))
-
 #endif /* ZEPHYR_SOC_INTEL_ADSP_POWER_H_ */
