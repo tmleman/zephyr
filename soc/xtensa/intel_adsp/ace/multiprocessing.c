@@ -92,8 +92,10 @@ void soc_mp_init(void)
 	/* Set the core 0 active */
 	soc_cpus_active[0] = true;
 #if CONFIG_ACE_VERSION_1_5
-	g_key_read_holder = INTEL_ADSP_ACE15_MAGIC_KEY;
-	sys_cache_data_flush_range(&g_key_read_holder, sizeof(g_key_read_holder));
+	volatile uint32_t *key_write_ptr = z_soc_cached_ptr(&g_key_read_holder);
+
+	*key_write_ptr = INTEL_ADSP_ACE15_MAGIC_KEY;
+	sys_cache_data_flush_range(key_write_ptr, sizeof(g_key_read_holder));
 #endif /* CONFIG_ACE_VERSION_1_5 */
 }
 
