@@ -27,6 +27,10 @@
 #include "dma_intel_adsp_hda.h"
 #include <intel_adsp_hda.h>
 
+#define LOG_LEVEL CONFIG_DMA_LOG_LEVEL
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(dma_intel_adsp_hdadma);
+
 int intel_adsp_hda_dma_host_in_config(const struct device *dev,
 				       uint32_t channel,
 				       struct dma_config *dma_cfg)
@@ -46,8 +50,19 @@ int intel_adsp_hda_dma_host_in_config(const struct device *dev,
 
 	blk_cfg = dma_cfg->head_block;
 	buf = (uint8_t *)(uintptr_t)(blk_cfg->source_address);
+	LOG_INF("%s: cfg->base = %d, cfg->regblock_size = %d, channel = %d, buf = 0x%x, blk_cfg->block_size = %d",
+		dev->name, cfg->base, cfg->regblock_size, channel, blk_cfg->source_address, blk_cfg->block_size);
 	res = intel_adsp_hda_set_buffer(cfg->base, cfg->regblock_size, channel, buf,
 				  blk_cfg->block_size);
+	if (res == -16) {
+		if (*DGCS(cfg->base, cfg->regblock_size, channel) & DGCS_GEN) {
+			LOG_ERR("DGCS_GEN");
+		}
+
+		if (*DGCS(cfg->base, cfg->regblock_size, channel) & DGCS_GBUSY) {
+			LOG_ERR("DGCS_GBUSY");
+		}
+	}
 
 	if (res == 0) {
 		*DGMBS(cfg->base, cfg->regblock_size, channel) =
@@ -80,9 +95,20 @@ int intel_adsp_hda_dma_host_out_config(const struct device *dev,
 
 	blk_cfg = dma_cfg->head_block;
 	buf = (uint8_t *)(uintptr_t)(blk_cfg->dest_address);
+	LOG_INF("%s: cfg->regblock_size = %d, channel = %d, buf = 0x%x, blk_cfg->block_size = %d",
+		dev->name, cfg->regblock_size, channel, blk_cfg->source_address, blk_cfg->block_size);
 
 	res = intel_adsp_hda_set_buffer(cfg->base, cfg->regblock_size, channel, buf,
 				  blk_cfg->block_size);
+	if (res == -16) {
+		if (*DGCS(cfg->base, cfg->regblock_size, channel) & DGCS_GEN) {
+			LOG_ERR("DGCS_GEN");
+		}
+
+		if (*DGCS(cfg->base, cfg->regblock_size, channel) & DGCS_GBUSY) {
+			LOG_ERR("DGCS_GBUSY");
+		}
+	}
 
 	if (res == 0) {
 		*DGMBS(cfg->base, cfg->regblock_size, channel) =
@@ -114,8 +140,20 @@ int intel_adsp_hda_dma_link_in_config(const struct device *dev,
 
 	blk_cfg = dma_cfg->head_block;
 	buf = (uint8_t *)(uintptr_t)(blk_cfg->dest_address);
+	LOG_INF("%s: cfg->regblock_size = %d, channel = %d, buf = 0x%x, blk_cfg->block_size = %d",
+		dev->name, cfg->regblock_size, channel, blk_cfg->source_address, blk_cfg->block_size);
 	res = intel_adsp_hda_set_buffer(cfg->base, cfg->regblock_size, channel, buf,
 				  blk_cfg->block_size);
+	if (res == -16) {
+		if (*DGCS(cfg->base, cfg->regblock_size, channel) & DGCS_GEN) {
+			LOG_ERR("DGCS_GEN");
+		}
+
+		if (*DGCS(cfg->base, cfg->regblock_size, channel) & DGCS_GBUSY) {
+			LOG_ERR("DGCS_GBUSY");
+		}
+	}
+
 	if (res == 0) {
 		intel_adsp_hda_set_sample_container_size(cfg->base, cfg->regblock_size, channel,
 							 dma_cfg->dest_data_size);
@@ -144,9 +182,21 @@ int intel_adsp_hda_dma_link_out_config(const struct device *dev,
 
 	blk_cfg = dma_cfg->head_block;
 	buf = (uint8_t *)(uintptr_t)(blk_cfg->source_address);
+	LOG_INF("%s: cfg->regblock_size = %d, channel = %d, buf = 0x%x, blk_cfg->block_size = %d",
+		dev->name, cfg->regblock_size, channel, blk_cfg->source_address, blk_cfg->block_size);
 
 	res = intel_adsp_hda_set_buffer(cfg->base, cfg->regblock_size, channel, buf,
 				  blk_cfg->block_size);
+	if (res == -16) {
+		if (*DGCS(cfg->base, cfg->regblock_size, channel) & DGCS_GEN) {
+			LOG_ERR("DGCS_GEN");
+		}
+
+		if (*DGCS(cfg->base, cfg->regblock_size, channel) & DGCS_GBUSY) {
+			LOG_ERR("DGCS_GBUSY");
+		}
+	}
+
 	if (res == 0) {
 		intel_adsp_hda_set_sample_container_size(cfg->base, cfg->regblock_size, channel,
 							 dma_cfg->source_data_size);
