@@ -382,6 +382,7 @@ int intel_adsp_hda_dma_stop(const struct device *dev, uint32_t channel)
 static void intel_adsp_hda_channels_init(const struct device *dev)
 {
 	const struct intel_adsp_hda_dma_cfg *const cfg = dev->config;
+	LOG_INF("%s, cfg->dma_channels=%u", dev->name, cfg->dma_channels);
 
 	for (uint32_t i = 0; i < cfg->dma_channels; i++) {
 		intel_adsp_hda_init(cfg->base, cfg->regblock_size, i);
@@ -389,6 +390,7 @@ static void intel_adsp_hda_channels_init(const struct device *dev)
 		if (intel_adsp_hda_is_enabled(cfg->base, cfg->regblock_size, i)) {
 			uint32_t size;
 
+			LOG_WRN("%x %d disabling channels", cfg->base, i);
 			size = intel_adsp_hda_get_buffer_size(cfg->base, cfg->regblock_size, i);
 			intel_adsp_hda_disable(cfg->base, cfg->regblock_size, i);
 			intel_adsp_hda_link_commit(cfg->base, cfg->regblock_size, i, size);
