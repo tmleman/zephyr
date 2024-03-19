@@ -22,8 +22,6 @@
 
 #define LPSRAM_MAGIC_VALUE      0x13579BDF
 #define LPSCTL_BATTR_MASK       GENMASK(16, 12)
-#define SRAM_ALIAS_BASE         0xA0000000
-#define SRAM_ALIAS_MASK         0xF0000000
 
 __imr void power_init(void)
 {
@@ -37,10 +35,6 @@ __imr void power_init(void)
 }
 
 #ifdef CONFIG_PM
-
-#define uncache_to_cache(address) \
-				((__typeof__(address))(((uint32_t)(address) &  \
-				~SRAM_ALIAS_MASK) | SRAM_ALIAS_BASE))
 
 #define L2_INTERRUPT_NUMBER     4
 #define L2_INTERRUPT_MASK       (1<<L2_INTERRUPT_NUMBER)
@@ -324,7 +318,7 @@ void pm_state_set(enum pm_state state, uint8_t substate_id)
 			/* do power down - this function won't return */
 			ret = pm_device_runtime_put(INTEL_ADSP_HST_DOMAIN_DEV);
 			__ASSERT_NO_MSG(ret == 0);
-			power_down(true, uncache_to_cache(&hpsram_mask),
+			power_down(true, sys_cache_cached_ptr_get(&hpsram_mask),
 				   true);
 		} else {
 			power_gate_entry(cpu);
