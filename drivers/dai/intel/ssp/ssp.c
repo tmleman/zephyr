@@ -2388,6 +2388,21 @@ static int ssp_init(const struct device *dev)
 	return pm_device_runtime_enable(dev);
 }
 
+static int dai_ssp_dma_control_set(const struct device *dev,
+				   const void *dma_control_params,
+				   size_t size)
+{
+	struct dai_intel_ssp *dp = (struct dai_intel_ssp *)dev->data;
+
+	LOG_INF("SSP%d: tlv addr = 0x%x, tlv size = %d", dp->dai_index, dma_control_params, size);
+
+	if (size < sizeof(struct ssp_intel_aux_tlv)) {
+		return -EINVAL;
+	}
+
+	return dai_ssp_parse_tlv(dp, dma_control_params, size);
+}
+
 static struct dai_driver_api dai_intel_ssp_api_funcs = {
 	.probe			= pm_device_runtime_get,
 	.remove			= pm_device_runtime_put,
@@ -2395,6 +2410,7 @@ static struct dai_driver_api dai_intel_ssp_api_funcs = {
 	.config_get		= dai_ssp_config_get,
 	.trigger		= dai_ssp_trigger,
 	.get_properties		= dai_ssp_get_properties,
+	.dma_control_set	= dai_ssp_dma_control_set,
 };
 
 
