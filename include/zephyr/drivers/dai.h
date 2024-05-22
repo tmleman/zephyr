@@ -328,6 +328,7 @@ __subsystem struct dai_driver_api {
 	int (*ts_stop)(const struct device *dev, struct dai_ts_cfg *cfg);
 	int (*ts_get)(const struct device *dev, struct dai_ts_cfg *cfg,
 		      struct dai_ts_data *tsd);
+	int (*dma_control_set)(const struct device *dev, const void *dma_control_params, size_t size);
 };
 
 /**
@@ -536,6 +537,34 @@ static inline int dai_ts_get(const struct device *dev, struct dai_ts_cfg *cfg,
 		return -EINVAL;
 
 	return api->ts_get(dev, cfg, tsd);
+}
+
+/**
+ * @brief Configure DMA control for DAI.
+ *
+ * This function configures the DMA control settings for a DAI interface.
+ * It allows setting parameters that are specific to DMA control only,
+ * without the need to provide the entire configuration blob.
+ *
+ * @param dev Pointer to the device structure for the driver instance.
+ * @param dma_control_params Pointer to the structure containing DMA control parameters.
+ * @param size Size of the dma_control_params buffer in bytes.
+ *
+ * @retval 0 If successful.
+ * @retval -ENOSYS If the DMA control set operation is not implemented.
+ * @retval Negative errno code if failure.
+ */
+static inline int dai_dma_control_set(const struct device *dev,
+				      const void *dma_control_params,
+				      size_t size)
+{
+	const struct dai_driver_api *api = (const struct dai_driver_api *)dev->api;
+
+	if (!api->dma_control_set) {
+		return -ENOSYS;
+	}
+
+	return api->dma_control_set(dev, dma_control_params, size);
 }
 
 /**
