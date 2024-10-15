@@ -62,6 +62,18 @@ power_down:
 	/* load address of DIPCTDR register */
 	movi p_ipc_regs, IPC_HOST_BASE
 	movi u32_ipc_response_mask, 0x20000000
+#if CONFIG_XTENSA_MMU
+	/**
+	 * This addresses an issue on platforms with an MMU where a
+	 * LoadStoreTLBMissCause exception occurs when accessing hardware
+	 * registers during the power-down process. By preloading the IPC
+	 * register, we ensure that the necessary TLB entry is available,
+	 * preventing a double exception (LoadStoreTLBMissCause followed by
+	 * InstrPIFDataErrorCause) when accessing the IPC register after
+	 * HPSRAM is powered down.
+	 */
+	l32i pfl_reg, p_ipc_regs, 0
+#endif
 
 _PD_DISABLE_LPSRAM:
 /**
