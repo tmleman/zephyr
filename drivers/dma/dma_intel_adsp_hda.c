@@ -27,6 +27,9 @@
 #include "dma_intel_adsp_hda.h"
 #include <intel_adsp_hda.h>
 
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(adsp_hda);
+
 int intel_adsp_hda_dma_host_in_config(const struct device *dev,
 				       uint32_t channel,
 				       struct dma_config *dma_cfg)
@@ -48,6 +51,9 @@ int intel_adsp_hda_dma_host_in_config(const struct device *dev,
 	buf = (uint8_t *)(uintptr_t)(blk_cfg->source_address);
 	res = intel_adsp_hda_set_buffer(cfg->base, cfg->regblock_size, channel, buf,
 				  blk_cfg->block_size);
+	if (res < 0) {
+		LOG_ERR("Failed to set buffer for channel %d (err = %d)", channel, res);
+	}
 
 	if (res == 0) {
 		*DGMBS(cfg->base, cfg->regblock_size, channel) =
@@ -83,6 +89,9 @@ int intel_adsp_hda_dma_host_out_config(const struct device *dev,
 
 	res = intel_adsp_hda_set_buffer(cfg->base, cfg->regblock_size, channel, buf,
 				  blk_cfg->block_size);
+	if (res < 0) {
+		LOG_ERR("Failed to set buffer for channel %d (err = %d)", channel, res);
+	}
 
 	if (res == 0) {
 		*DGMBS(cfg->base, cfg->regblock_size, channel) =
@@ -116,6 +125,10 @@ int intel_adsp_hda_dma_link_in_config(const struct device *dev,
 	buf = (uint8_t *)(uintptr_t)(blk_cfg->dest_address);
 	res = intel_adsp_hda_set_buffer(cfg->base, cfg->regblock_size, channel, buf,
 				  blk_cfg->block_size);
+	if (res < 0) {
+		LOG_ERR("Failed to set buffer for channel %d (err = %d)", channel, res);
+	}
+
 	if (res == 0) {
 		intel_adsp_hda_set_sample_container_size(cfg->base, cfg->regblock_size, channel,
 							 dma_cfg->dest_data_size);
@@ -147,6 +160,10 @@ int intel_adsp_hda_dma_link_out_config(const struct device *dev,
 
 	res = intel_adsp_hda_set_buffer(cfg->base, cfg->regblock_size, channel, buf,
 				  blk_cfg->block_size);
+	if (res < 0) {
+		LOG_ERR("Failed to set buffer for channel %d (err = %d)", channel, res);
+	}
+
 	if (res == 0) {
 		intel_adsp_hda_set_sample_container_size(cfg->base, cfg->regblock_size, channel,
 							 dma_cfg->source_data_size);
@@ -362,6 +379,7 @@ int intel_adsp_hda_dma_stop(const struct device *dev, uint32_t channel)
 static void intel_adsp_hda_channels_init(const struct device *dev)
 {
 	const struct intel_adsp_hda_dma_cfg *const cfg = dev->config;
+	LOG_INF("Initializing %s", dev->name);
 
 	for (uint32_t i = 0; i < cfg->dma_channels; i++) {
 		intel_adsp_hda_init(cfg->base, cfg->regblock_size, i);
@@ -393,8 +411,10 @@ int intel_adsp_hda_dma_init(const struct device *dev)
 	data->ctx.magic = DMA_MAGIC;
 #ifdef CONFIG_PM_DEVICE_RUNTIME
 	if (pm_device_on_power_domain(dev)) {
+		LOG_INF("%s is under power domain", dev->name);
 		pm_device_init_off(dev);
 	} else {
+		LOG_WRN("%s has no power domain", dev->name);
 		intel_adsp_hda_channels_init(dev);
 		pm_device_init_suspended(dev);
 	}
