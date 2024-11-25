@@ -412,19 +412,18 @@ int intel_adsp_hda_dma_init(const struct device *dev)
 	data->ctx.dma_channels = cfg->dma_channels;
 	data->ctx.atomic = data->channels_atomic;
 	data->ctx.magic = DMA_MAGIC;
+	intel_adsp_hda_channels_init(dev);
 #ifdef CONFIG_PM_DEVICE_RUNTIME
 	if (pm_device_on_power_domain(dev)) {
 		LOG_INF("%s is under power domain", dev->name);
 		pm_device_init_off(dev);
 	} else {
 		LOG_WRN("%s has no power domain", dev->name);
-		intel_adsp_hda_channels_init(dev);
 		pm_device_init_suspended(dev);
 	}
 
 	return pm_device_runtime_enable(dev);
 #else
-	intel_adsp_hda_channels_init(dev);
 	return 0;
 #endif
 }
