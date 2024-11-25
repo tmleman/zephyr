@@ -38,7 +38,6 @@ int intel_adsp_hda_dma_host_in_config(const struct device *dev,
 	struct dma_block_config *blk_cfg;
 	uint8_t *buf;
 	int res;
-
 	__ASSERT(channel < cfg->dma_channels, "Channel does not exist");
 	__ASSERT(dma_cfg->block_count == 1,
 		 "HDA does not support scatter gather or chained "
@@ -63,6 +62,7 @@ int intel_adsp_hda_dma_host_in_config(const struct device *dev,
 							 dma_cfg->source_data_size);
 	}
 
+	LOG_INF("configuring %s, channel %u", dev->name, channel);
 	return res;
 }
 
@@ -101,6 +101,7 @@ int intel_adsp_hda_dma_host_out_config(const struct device *dev,
 							 dma_cfg->dest_data_size);
 	}
 
+	LOG_INF("configuring %s, channel %u", dev->name, channel);
 	return res;
 }
 
@@ -134,6 +135,7 @@ int intel_adsp_hda_dma_link_in_config(const struct device *dev,
 							 dma_cfg->dest_data_size);
 	}
 
+	LOG_INF("configuring %s, channel %u", dev->name, channel);
 	return res;
 }
 
@@ -169,6 +171,7 @@ int intel_adsp_hda_dma_link_out_config(const struct device *dev,
 							 dma_cfg->source_data_size);
 	}
 
+	LOG_INF("configuring %s, channel %u", dev->name, channel);
 	return res;
 }
 
