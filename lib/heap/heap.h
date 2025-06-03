@@ -10,6 +10,19 @@
  * Internal heap APIs
  */
 
+#ifdef CONFIG_SYS_HEAP_ASAN_POISONING
+#include <sanitizer/asan_interface.h>
+
+/* Define ASAN-specific attributes and macros */
+#define HEAP_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
+#define ASAN_POISON_HEAP_MEMORY(addr, size) ASAN_POISON_MEMORY_REGION(addr, size)
+#define ASAN_UNPOISON_HEAP_MEMORY(addr, size) ASAN_UNPOISON_MEMORY_REGION(addr, size)
+#else
+#define HEAP_NO_SANITIZE_ADDRESS
+#define ASAN_POISON_HEAP_MEMORY(addr, size)
+#define ASAN_UNPOISON_HEAP_MEMORY(addr, size)
+#endif
+
 /* These validation checks are non-trivially expensive, so enable
  * only when debugging the heap code.  They shouldn't be routine
  * assertions.
@@ -104,7 +117,7 @@ static inline chunk_unit_t *chunk_buf(struct z_heap *h)
 	return (chunk_unit_t *)h;
 }
 
-static inline chunkid_t chunk_field(struct z_heap *h, chunkid_t c,
+static inline chunkid_t HEAP_NO_SANITIZE_ADDRESS chunk_field(struct z_heap *h, chunkid_t c,
 				    enum chunk_fields f)
 {
 	chunk_unit_t *buf = chunk_buf(h);
@@ -117,7 +130,7 @@ static inline chunkid_t chunk_field(struct z_heap *h, chunkid_t c,
 	}
 }
 
-static inline void chunk_set(struct z_heap *h, chunkid_t c,
+static inline void HEAP_NO_SANITIZE_ADDRESS chunk_set(struct z_heap *h, chunkid_t c,
 			     enum chunk_fields f, chunkid_t val)
 {
 	CHECK(c <= h->end_chunk);
@@ -134,17 +147,17 @@ static inline void chunk_set(struct z_heap *h, chunkid_t c,
 	}
 }
 
-static inline bool chunk_used(struct z_heap *h, chunkid_t c)
+static inline bool HEAP_NO_SANITIZE_ADDRESS chunk_used(struct z_heap *h, chunkid_t c)
 {
 	return chunk_field(h, c, SIZE_AND_USED) & 1U;
 }
 
-static inline chunksz_t chunk_size(struct z_heap *h, chunkid_t c)
+static inline chunksz_t HEAP_NO_SANITIZE_ADDRESS chunk_size(struct z_heap *h, chunkid_t c)
 {
 	return chunk_field(h, c, SIZE_AND_USED) >> 1;
 }
 
-static inline void set_chunk_used(struct z_heap *h, chunkid_t c, bool used)
+static inline void HEAP_NO_SANITIZE_ADDRESS set_chunk_used(struct z_heap *h, chunkid_t c, bool used)
 {
 	chunk_unit_t *buf = chunk_buf(h);
 	void *cmem = &buf[c];
@@ -169,7 +182,7 @@ static inline void set_chunk_used(struct z_heap *h, chunkid_t c, bool used)
  * when its size is modified, and potential set_chunk_used() is always
  * invoked after set_chunk_size().
  */
-static inline void set_chunk_size(struct z_heap *h, chunkid_t c, chunksz_t size)
+static inline void HEAP_NO_SANITIZE_ADDRESS set_chunk_size(struct z_heap *h, chunkid_t c, chunksz_t size)
 {
 	chunk_set(h, c, SIZE_AND_USED, size << 1);
 }
