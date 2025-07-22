@@ -1,0 +1,34 @@
+tests:
+  libraries.heap_asan_poisoning:
+    tags: heap asan poisoning
+    arch_exclude:
+      - posix
+    min_ram: 32
+    harness: ztest
+    integration_platforms:
+      - qemu_x86
+      - native_sim
+
+  libraries.heap_asan_poisoning.use_after_free:
+    tags: heap asan poisoning error_detection
+    arch_exclude:
+      - posix
+    min_ram: 32
+    harness: ztest
+    extra_configs:
+      - CONFIG_TEST_USE_AFTER_FREE=y
+    integration_platforms:
+      - native_sim
+    expected_failures: 1
+
+  libraries.heap_asan_poisoning.unallocated_access:
+    tags: heap asan poisoning error_detection
+    arch_exclude:
+      - posix
+    min_ram: 32
+    harness: ztest
+    extra_configs:
+      - CONFIG_TEST_UNALLOCATED_ACCESS=y
+    integration_platforms:
+      - native_sim
+    expected_failures: 1

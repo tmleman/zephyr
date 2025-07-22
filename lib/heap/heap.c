@@ -100,19 +100,10 @@ static void free_list_add_bidx(struct z_heap *h, chunkid_t c, int bidx)
 	}
 
 #ifdef CONFIG_SYS_HEAP_ASAN_POISONING
-	/* Poison the free chunk's user data area, but not the chunk headers
-	 * Note: The chunk metadata (prev/next pointers) are stored at the beginning
-	 * of the user data area and must remain unpoisoned for list operations
-	 */
 	void *mem = chunk_mem(h, c);
 	size_t user_size = chunksz_to_bytes(h, chunk_size(h, c)) - chunk_header_bytes(h);
 
-	/* Skip the free list pointers at the start of the chunk */
-	if (user_size > 2 * sizeof(chunkid_t)) {
-		uint8_t *poison_start = (uint8_t *)mem + 2 * sizeof(chunkid_t);
-		size_t poison_size = user_size - 2 * sizeof(chunkid_t);
-		ASAN_POISON_MEMORY_REGION(poison_start, poison_size);
-	}
+	ASAN_POISON_MEMORY_REGION(mem, user_size);
 #endif
 
 #ifdef CONFIG_SYS_HEAP_RUNTIME_STATS

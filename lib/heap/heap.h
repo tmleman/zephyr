@@ -147,17 +147,17 @@ static inline void HEAP_NO_SANITIZE_ADDRESS chunk_set(struct z_heap *h, chunkid_
 	}
 }
 
-static inline bool HEAP_NO_SANITIZE_ADDRESS chunk_used(struct z_heap *h, chunkid_t c)
+static inline bool chunk_used(struct z_heap *h, chunkid_t c)
 {
 	return chunk_field(h, c, SIZE_AND_USED) & 1U;
 }
 
-static inline chunksz_t HEAP_NO_SANITIZE_ADDRESS chunk_size(struct z_heap *h, chunkid_t c)
+static inline chunksz_t chunk_size(struct z_heap *h, chunkid_t c)
 {
 	return chunk_field(h, c, SIZE_AND_USED) >> 1;
 }
 
-static inline void HEAP_NO_SANITIZE_ADDRESS set_chunk_used(struct z_heap *h, chunkid_t c, bool used)
+static inline void set_chunk_used(struct z_heap *h, chunkid_t c, bool used)
 {
 	chunk_unit_t *buf = chunk_buf(h);
 	void *cmem = &buf[c];
@@ -182,7 +182,7 @@ static inline void HEAP_NO_SANITIZE_ADDRESS set_chunk_used(struct z_heap *h, chu
  * when its size is modified, and potential set_chunk_used() is always
  * invoked after set_chunk_size().
  */
-static inline void HEAP_NO_SANITIZE_ADDRESS set_chunk_size(struct z_heap *h, chunkid_t c, chunksz_t size)
+static inline void set_chunk_size(struct z_heap *h, chunkid_t c, chunksz_t size)
 {
 	chunk_set(h, c, SIZE_AND_USED, size << 1);
 }

@@ -54,21 +54,20 @@ config SYS_HEAP_RUNTIME_STATS
 
 config SYS_HEAP_ASAN_POISONING
 	bool "Enable Address Sanitizer (ASAN) memory poisoning"
+	depends on ASAN
 	help
 	  Enables integration with Clang's Address Sanitizer (ASAN)
 	  to implement comprehensive memory poisoning for the heap allocator.
 
 	  This feature provides enhanced error detection by:
-	  - Poisoning freed memory to detect use-after-free errors
 	  - Poisoning unallocated memory to detect access to never-allocated regions
+	  - Poisoning freed memory to detect use-after-free errors
 	  - Maintaining boundary protection between allocated and free regions
-	  - Protecting heap metadata structures from corruption
 
 	  When enabled, the following types of memory errors can be detected:
 	  - Use-after-free: Accessing memory after it has been freed
 	  - Unallocated access: Accessing memory that was never allocated
 	  - Buffer overruns: Writing beyond allocated boundaries
-	  - Heap corruption: Invalid access to heap metadata
 
 	  Use for debugging and validation only.
 	  Depends on compiler support for ASAN (typically Clang).
