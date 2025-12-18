@@ -1,0 +1,8 @@
+tests:
+  libraries.heap_asan:
+    tags:
+      - heap
+      - heap_asan
+    harness: ztest
+    integration_platforms:
+      - native_sim

@@ -1,0 +1,19 @@
+# Copyright (c) 2025
+#
+# SPDX-License-Identifier: Apache-2.0
+
+config TEST_USE_AFTER_FREE
+    bool "Enable heap use-after-free detection test"
+    default n
+    help
+      Enable the use-after-free detection test case in the
+      heap_asan_poisoning test suite.
+
+config TEST_UNALLOCATED_ACCESS
+    bool "Enable heap unallocated access detection test"
+    default n
+    help
+      Enable the unallocated-access detection test case in the
+      heap_asan_poisoning test suite.
+
+source "Kconfig.zephyr"
