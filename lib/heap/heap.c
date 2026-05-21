@@ -97,10 +97,7 @@ static void free_list_remove_bidx(struct z_heap *h, chunkid_t c, int bidx)
 	/* Unpoison the chunk when it's being removed from the free list
 	 * This is done before the chunk is allocated to allow safe access
 	 */
-	void *mem = chunk_mem(h, c);
-	size_t user_size = chunksz_to_bytes(h, chunk_size(h, c)) - chunk_header_bytes(h);
-
-	ASAN_UNPOISON_HEAP_MEMORY(mem, user_size);
+	ASAN_UNPOISON_HEAP_MEMORY(chunk_mem(h, c), chunk_usable_bytes(h, c));
 #endif
 
 	if (next_free_chunk(h, c) == c) {
@@ -168,10 +165,7 @@ static void free_list_add_bidx(struct z_heap *h, chunkid_t c, int bidx)
 	}
 
 #ifdef CONFIG_SYS_HEAP_ASAN_POISONING
-	void *mem = chunk_mem(h, c);
-	size_t user_size = chunksz_to_bytes(h, chunk_size(h, c)) - chunk_header_bytes(h);
-
-	ASAN_POISON_HEAP_MEMORY(mem, user_size);
+	ASAN_POISON_HEAP_MEMORY(chunk_mem(h, c), chunk_usable_bytes(h, c));
 #endif
 
 #ifdef CONFIG_SYS_HEAP_RUNTIME_STATS
