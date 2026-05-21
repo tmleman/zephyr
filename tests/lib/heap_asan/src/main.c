@@ -536,7 +536,7 @@ ZTEST(heap_asan_poisoning, test_playground)
 		 new_ptr1, new_usable1);
 
 	/* Verify original data preserved */
-	for (size_t i = 0; i < min(usable1, 200); i++) {
+	for (size_t i = 0; i < MIN(usable1, 200); i++) {
 		zassert_equal(((uint8_t *)new_ptr1)[i], 0xAA,
 			     "Data not preserved during realloc at offset %zu", i);
 	}
