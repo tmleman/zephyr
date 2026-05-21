@@ -94,10 +94,11 @@ static void free_list_remove_bidx(struct z_heap *h, chunkid_t c, int bidx)
 	CHECK(h->avail_buckets & BIT(bidx));
 
 #ifdef CONFIG_SYS_HEAP_ASAN_POISONING
-	/* Unpoison the chunk when it's being removed from the free list
-	 * This is done before the chunk is allocated to allow safe access
+	/* Unpoison the chunk when it's being removed from the free list.
+	 * Cover the trailer too so set_chunk_canary() can write it on alloc.
 	 */
-	ASAN_UNPOISON_HEAP_MEMORY(chunk_mem(h, c), chunk_usable_bytes(h, c));
+	ASAN_UNPOISON_HEAP_MEMORY(chunk_mem(h, c),
+				  chunk_usable_bytes(h, c) + CHUNK_TRAILER_SIZE * CHUNK_UNIT);
 #endif
 
 	if (next_free_chunk(h, c) == c) {
@@ -165,7 +166,12 @@ static void free_list_add_bidx(struct z_heap *h, chunkid_t c, int bidx)
 	}
 
 #ifdef CONFIG_SYS_HEAP_ASAN_POISONING
-	ASAN_POISON_HEAP_MEMORY(chunk_mem(h, c), chunk_usable_bytes(h, c));
+	/* Poison the chunk body together with its trailer. The trailer holds
+	 * HEAP_CANARY_POISON written by poison_chunk_canary() just before this
+	 * call, so it's safe to poison here.
+	 */
+	ASAN_POISON_HEAP_MEMORY(chunk_mem(h, c),
+				chunk_usable_bytes(h, c) + CHUNK_TRAILER_SIZE * CHUNK_UNIT);
 #endif
 
 #ifdef CONFIG_SYS_HEAP_RUNTIME_STATS
@@ -800,10 +806,10 @@ void sys_heap_init(struct sys_heap *heap, void *mem, size_t bytes)
 	__ASSERT(chunk0_size + min_chunk_size(h) <= heap_sz, "heap size is too small");
 
 #ifdef CONFIG_SYS_HEAP_ASAN_POISONING
-	/* Extend unpoisoning to cover full metadata including buckets array */
-	size_t metadata_size = sizeof(struct z_heap) +
-			       nb_buckets * sizeof(struct z_heap_bucket);
-	ASAN_UNPOISON_HEAP_MEMORY(h, metadata_size);
+	/* Unpoison the entire chunk0 region (metadata + trailer) so that
+	 * set_chunk_canary() can write the canary at the trailer position.
+	 */
+	ASAN_UNPOISON_HEAP_MEMORY(h, chunk0_size * CHUNK_UNIT);
 #endif
 
 	for (int i = 0; i < nb_buckets; i++) {
