@@ -17,6 +17,23 @@ LOG_MODULE_REGISTER(os_heap, CONFIG_SYS_HEAP_LOG_LEVEL);
 #include <sanitizer/msan_interface.h>
 #endif
 
+#ifdef CONFIG_SYS_HEAP_ASAN_POISONING
+/*
+ * This file is compiled with -fno-sanitize=address (see CMakeLists.txt) so
+ * the heap implementation can freely access poisoned memory. As a side
+ * effect, __SANITIZE_ADDRESS__ is not defined here and the macros from
+ * <sanitizer/asan_interface.h> compile away. Declare and call the runtime
+ * entry points directly so we still update the ASAN shadow.
+ */
+void __asan_poison_memory_region(void const volatile *addr, size_t size);
+void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
+#define ASAN_POISON_HEAP_MEMORY(addr, size)   __asan_poison_memory_region((addr), (size))
+#define ASAN_UNPOISON_HEAP_MEMORY(addr, size) __asan_unpoison_memory_region((addr), (size))
+#else
+#define ASAN_POISON_HEAP_MEMORY(addr, size)
+#define ASAN_UNPOISON_HEAP_MEMORY(addr, size)
+#endif
+
 #ifdef CONFIG_SYS_HEAP_CANARIES_RANDOM
 #include <zephyr/random/random.h>
 #endif
@@ -93,14 +110,6 @@ static void free_list_remove_bidx(struct z_heap *h, chunkid_t c, int bidx)
 	CHECK(b->next != 0);
 	CHECK(h->avail_buckets & BIT(bidx));
 
-#ifdef CONFIG_SYS_HEAP_ASAN_POISONING
-	/* Unpoison the chunk when it's being removed from the free list.
-	 * Cover the trailer too so set_chunk_canary() can write it on alloc.
-	 */
-	ASAN_UNPOISON_HEAP_MEMORY(chunk_mem(h, c),
-				  chunk_usable_bytes(h, c) + CHUNK_TRAILER_SIZE * CHUNK_UNIT);
-#endif
-
 	if (next_free_chunk(h, c) == c) {
 		/* this is the last chunk */
 		h->avail_buckets &= ~BIT(bidx);
@@ -164,15 +173,6 @@ static void free_list_add_bidx(struct z_heap *h, chunkid_t c, int bidx)
 		set_next_free_chunk(h, first, c);
 		set_prev_free_chunk(h, second, c);
 	}
-
-#ifdef CONFIG_SYS_HEAP_ASAN_POISONING
-	/* Poison the chunk body together with its trailer. The trailer holds
-	 * HEAP_CANARY_POISON written by poison_chunk_canary() just before this
-	 * call, so it's safe to poison here.
-	 */
-	ASAN_POISON_HEAP_MEMORY(chunk_mem(h, c),
-				chunk_usable_bytes(h, c) + CHUNK_TRAILER_SIZE * CHUNK_UNIT);
-#endif
 
 #ifdef CONFIG_SYS_HEAP_RUNTIME_STATS
 	h->free_bytes += chunk_usable_bytes(h, c);
@@ -292,6 +292,35 @@ static chunkid_t mem_to_chunkid(struct z_heap *h, void *p)
 	return (mem - chunk_header_bytes(h) - base) / CHUNK_UNIT;
 }
 
+#ifdef CONFIG_SYS_HEAP_ASAN_POISONING
+/*
+ * (Un)poison an entire chunk. We work at CHUNK_UNIT (== 8 byte) granularity
+ * because chunk_buf(h) is CHUNK_UNIT-aligned and chunk sizes are expressed
+ * in CHUNK_UNITs, which matches the 8-byte ASAN shadow granularity. Using
+ * the user-visible region [mem, mem + usable_bytes) would yield an unaligned
+ * start address (chunk_header_bytes is 4 on a small heap), which the ASAN
+ * runtime does not handle reliably for partial shadow bytes.
+ *
+ * Over-poisoning the chunk header/trailer is safe: heap.c is excluded from
+ * ASAN instrumentation (see CMakeLists.txt) so the heap can freely access
+ * those bytes regardless of their shadow state, while instrumented callers
+ * only ever touch the user data region.
+ */
+static inline void asan_unpoison_chunk(struct z_heap *h, chunkid_t c)
+{
+	void *addr = (uint8_t *)chunk_buf(h) + c * CHUNK_UNIT;
+
+	ASAN_UNPOISON_HEAP_MEMORY(addr, chunk_size(h, c) * CHUNK_UNIT);
+}
+
+static inline void asan_poison_chunk(struct z_heap *h, chunkid_t c)
+{
+	void *addr = (uint8_t *)chunk_buf(h) + c * CHUNK_UNIT;
+
+	ASAN_POISON_HEAP_MEMORY(addr, chunk_size(h, c) * CHUNK_UNIT);
+}
+#endif
+
 void sys_heap_free(struct sys_heap *heap, void *mem)
 {
 	if (mem == NULL) {
@@ -358,6 +387,9 @@ void sys_heap_free(struct sys_heap *heap, void *mem)
 	heap_listener_notify_free(HEAP_ID_FROM_POINTER(heap), mem,
 				  chunk_usable_bytes(h, c) - mem_align_gap(h, mem));
 #endif
+
+	IF_ENABLED(CONFIG_SYS_HEAP_ASAN_POISONING,
+		   (asan_poison_chunk(h, c)));
 
 	free_chunk(h, c);
 }
@@ -472,6 +504,8 @@ void *sys_heap_alloc(struct sys_heap *heap, size_t bytes)
 #endif
 
 	IF_ENABLED(CONFIG_MSAN, (__msan_allocated_memory(mem, bytes)));
+	IF_ENABLED(CONFIG_SYS_HEAP_ASAN_POISONING,
+		   (asan_unpoison_chunk(h, c)));
 	return mem;
 }
 
@@ -560,6 +594,8 @@ void *sys_heap_aligned_alloc(struct sys_heap *heap, size_t align, size_t bytes)
 #endif
 
 	IF_ENABLED(CONFIG_MSAN, (__msan_allocated_memory(mem, bytes)));
+	IF_ENABLED(CONFIG_SYS_HEAP_ASAN_POISONING,
+		   (asan_unpoison_chunk(h, c)));
 	return mem;
 }
 
@@ -681,6 +717,39 @@ static bool inplace_realloc(struct sys_heap *heap, void *ptr, size_t bytes)
 	return false;
 }
 
+#ifdef CONFIG_SYS_HEAP_ASAN_POISONING
+/*
+ * Update the ASAN shadow after a successful in-place realloc. The chunk c
+ * stayed at the same address but its size changed: extend (un)poisoning at
+ * the chunk's tail accordingly. The bytes peeled off on shrink will be
+ * (re)poisoned as part of the new free chunk created by split; the bytes
+ * absorbed on grow used to belong to a free chunk and were therefore
+ * poisoned, so they need to be unpoisoned again.
+ */
+static void asan_repoison_inplace(struct sys_heap *heap, void *ptr, size_t prev_size_bytes)
+{
+	struct z_heap *h = heap->heap;
+	chunkid_t c = mem_to_chunkid(h, ptr);
+	size_t new_size_bytes = chunk_size(h, c) * CHUNK_UNIT;
+	uint8_t *chunk_addr = (uint8_t *)chunk_buf(h) + c * CHUNK_UNIT;
+
+	if (new_size_bytes > prev_size_bytes) {
+		ASAN_UNPOISON_HEAP_MEMORY(chunk_addr + prev_size_bytes,
+					  new_size_bytes - prev_size_bytes);
+	} else if (new_size_bytes < prev_size_bytes) {
+		ASAN_POISON_HEAP_MEMORY(chunk_addr + new_size_bytes,
+					prev_size_bytes - new_size_bytes);
+	}
+}
+
+static inline size_t asan_chunk_bytes(struct sys_heap *heap, void *ptr)
+{
+	struct z_heap *h = heap->heap;
+
+	return chunk_size(h, mem_to_chunkid(h, ptr)) * CHUNK_UNIT;
+}
+#endif
+
 void *sys_heap_realloc(struct sys_heap *heap, void *ptr, size_t bytes)
 {
 	/* special realloc semantics */
@@ -692,9 +761,14 @@ void *sys_heap_realloc(struct sys_heap *heap, void *ptr, size_t bytes)
 		return NULL;
 	}
 
+	size_t prev_usable = sys_heap_usable_size(heap, ptr);
+#ifdef CONFIG_SYS_HEAP_ASAN_POISONING
+	size_t prev_chunk_bytes = asan_chunk_bytes(heap, ptr);
+#endif
+
 	if (inplace_realloc(heap, ptr, bytes)) {
-		/* For in-place realloc, we need to ensure the memory is unpoisoned */
-		ASAN_UNPOISON_HEAP_MEMORY(ptr, sys_heap_usable_size(heap, ptr));
+		IF_ENABLED(CONFIG_SYS_HEAP_ASAN_POISONING,
+			   (asan_repoison_inplace(heap, ptr, prev_chunk_bytes)));
 		return ptr;
 	}
 
@@ -702,13 +776,8 @@ void *sys_heap_realloc(struct sys_heap *heap, void *ptr, size_t bytes)
 	void *ptr2 = sys_heap_alloc(heap, bytes);
 
 	if (ptr2 != NULL) {
-		size_t prev_size = sys_heap_usable_size(heap, ptr);
-
-		/* Temporarily unpoison the memory before copying */
-		ASAN_UNPOISON_HEAP_MEMORY(ptr, prev_size);
-		memcpy(ptr2, ptr, min(prev_size, bytes));
+		memcpy(ptr2, ptr, MIN(prev_usable, bytes));
 		sys_heap_free(heap, ptr);
-		/* Note: sys_heap_free will poison ptr after the copy */
 	}
 	return ptr2;
 }
@@ -727,10 +796,15 @@ void *sys_heap_aligned_realloc(struct sys_heap *heap, void *ptr,
 
 	__ASSERT((align & (align - 1)) == 0, "align must be a power of 2");
 
+	size_t prev_usable = sys_heap_usable_size(heap, ptr);
+#ifdef CONFIG_SYS_HEAP_ASAN_POISONING
+	size_t prev_chunk_bytes = asan_chunk_bytes(heap, ptr);
+#endif
+
 	if ((align == 0 || ((uintptr_t)ptr & (align - 1)) == 0) &&
 	    inplace_realloc(heap, ptr, bytes)) {
-		/* For in-place realloc, we need to ensure the memory is unpoisoned */
-		ASAN_UNPOISON_HEAP_MEMORY(ptr, sys_heap_usable_size(heap, ptr));
+		IF_ENABLED(CONFIG_SYS_HEAP_ASAN_POISONING,
+			   (asan_repoison_inplace(heap, ptr, prev_chunk_bytes)));
 		return ptr;
 	}
 
@@ -741,13 +815,8 @@ void *sys_heap_aligned_realloc(struct sys_heap *heap, void *ptr,
 	void *ptr2 = sys_heap_aligned_alloc(heap, align, bytes);
 
 	if (ptr2 != NULL) {
-		size_t prev_size = sys_heap_usable_size(heap, ptr);
-
-		/* Temporarily unpoison the memory before copying */
-		ASAN_UNPOISON_HEAP_MEMORY(ptr, prev_size);
-		memcpy(ptr2, ptr, min(prev_size, bytes));
+		memcpy(ptr2, ptr, MIN(prev_usable, bytes));
 		sys_heap_free(heap, ptr);
-		/* Note: sys_heap_free will poison ptr after the copy */
 	}
 	return ptr2;
 }
@@ -781,9 +850,6 @@ void sys_heap_init(struct sys_heap *heap, void *mem, size_t bytes)
 
 	struct z_heap *h = (struct z_heap *)addr;
 
-	/* Unpoison a minimal region first, set end_chunk, then calculate and unpoison the full metadata. */
-	ASAN_UNPOISON_HEAP_MEMORY(h, sizeof(struct z_heap));
-
 	heap->heap = h;
 	h->end_chunk = heap_sz;
 	h->avail_buckets = 0;
@@ -805,12 +871,18 @@ void sys_heap_init(struct sys_heap *heap, void *mem, size_t bytes)
 
 	__ASSERT(chunk0_size + min_chunk_size(h) <= heap_sz, "heap size is too small");
 
-#ifdef CONFIG_SYS_HEAP_ASAN_POISONING
-	/* Unpoison the entire chunk0 region (metadata + trailer) so that
-	 * set_chunk_canary() can write the canary at the trailer position.
+	/*
+	 * Unpoison the metadata chunk (struct z_heap + bucket array) and the
+	 * end marker chunk now that their sizes are known. While heap.c itself
+	 * is excluded from ASAN instrumentation, the ASAN runtime still
+	 * intercepts libc primitives such as memset/memcpy that the compiler
+	 * may emit for plain loops or struct assignments. Those interceptors
+	 * always check the destination shadow, so the metadata region must be
+	 * marked addressable before it is touched.
 	 */
 	ASAN_UNPOISON_HEAP_MEMORY(h, chunk0_size * CHUNK_UNIT);
-#endif
+	ASAN_UNPOISON_HEAP_MEMORY((uint8_t *)h + heap_sz * CHUNK_UNIT,
+				  chunk_header_bytes(h));
 
 	for (int i = 0; i < nb_buckets; i++) {
 		h->buckets[i].next = 0;
@@ -819,11 +891,6 @@ void sys_heap_init(struct sys_heap *heap, void *mem, size_t bytes)
 #ifdef CONFIG_SYS_HEAP_CANARIES_RANDOM
 	sys_rand_get(&h->canary_base, sizeof(h->canary_base));
 #endif
-	/* Unpoison chunk headers that will be set during initialization */
-	ASAN_UNPOISON_HEAP_MEMORY((void *)((uint8_t *)h + chunk0_size * CHUNK_UNIT),
-				    chunk_header_bytes(h));
-	ASAN_UNPOISON_HEAP_MEMORY((void *)((uint8_t *)h + heap_sz * CHUNK_UNIT),
-				    chunk_header_bytes(h));
 
 	/* chunk containing our struct z_heap */
 	set_chunk_size(h, 0, chunk0_size);
